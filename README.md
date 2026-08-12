@@ -71,7 +71,7 @@ Cleaned CSV: data/clean/*.csv
 
 
 ## PROJECT STRUCTURE
-'''text
+```text
 besa_pipeline/
 ├─ data/
 │  ├─ raw/       # Raw Excel exports
@@ -83,7 +83,4 @@ besa_pipeline/
 ├─ config.py     # API keys and list IDs
 ├─ main.py       # Runs the full pipeline
 └─ README.md     # This file
-'''
-
-
-
+```
