@@ -1,5 +1,10 @@
 # config.py
-CLICKUP_TOKEN = 'pk_80488909_E7HYSNIATQDY0IJF3894MGZXKGDNQAJA'
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from .env file
+
+CLICKUP_TOKEN = os.getenv("CLICKUP_TOKEN")
 HEADERS = {"Authorization": CLICKUP_TOKEN}
 
 # IDs - keep them in one place for easy changes

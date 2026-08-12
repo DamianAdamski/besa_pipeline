@@ -4,3 +4,8 @@ add .gitignore
 add .env 
 add the .env to github secrets 
 change the filenames so I they use mine, not madalinas 
+
+
+what was done:
+-created requirements.txt  with all the python pip install requirements
+-added .env for security and moved the clickup api token there.
