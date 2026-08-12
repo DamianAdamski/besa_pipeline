@@ -58,7 +58,7 @@ cd besa_pipeline
 2. Install Python dependencies:
 ```pip install -r requirements.txt```
 
-3. Find your API from ClickUp and create a file in the project folder called .env as below:
+3. Find your API from ClickUp and create a file in the project folder called .env with content as below:
 
 CLICKUP_TOKEN = YOUR_CLICKUP_TOKEN
 
