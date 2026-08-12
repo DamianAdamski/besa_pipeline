@@ -58,12 +58,9 @@ cd besa_pipeline
 2. Install Python dependencies:
 ```pip install -r requirements.txt```
 
-3. Configure your ClickUp API in config.py:
-HEADERS = {
-    "Authorization": "YOUR_CLICKUP_API_TOKEN"
-}
+3. Find your API from ClickUp and create a file in the project folder called .env as below:
 
-BESA_CLIENTS_LIST_ID = "YOUR_CLICKUP_LIST_ID"
+CLICKUP_TOKEN = YOUR_CLICKUP_TOKEN
 
 4. Run the pipeline in your terminal ```python main.py```
 
