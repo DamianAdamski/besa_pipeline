@@ -1,0 +1,37 @@
+# Environment variables / secrets
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+out/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code settings
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Testing / coverage
+coverage/
+.pytest_cache/
+
+# Temporary files
+*.tmp
+*.temp

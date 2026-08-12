@@ -1,0 +1,6 @@
+Tokens are open and updated to github - need change 
+add a scheduler.py for github action
+add .gitignore
+add .env 
+add the .env to github secrets 
+change the filenames so I they use mine, not madalinas 
