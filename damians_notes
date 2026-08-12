@@ -7,3 +7,4 @@ what was done:
 -created requirements.txt  with all the python pip install requirements
 -added .env for security and moved the clickup api token there.
 -used pathlib instead of absolute path to make it work on everyone's device
+-fixed the project structure on github so it no longer collapses
