@@ -1,11 +1,9 @@
-Tokens are open and updated to github - need change 
 add a scheduler.py for github action
-add .gitignore
-add .env 
-add the .env to github secrets 
-change the filenames so I they use mine, not madalinas 
+add the .env to github secrets - if needed
+
 
 
 what was done:
 -created requirements.txt  with all the python pip install requirements
 -added .env for security and moved the clickup api token there.
+-used pathlib instead of absolute path to make it work on everyone's device

@@ -1,15 +1,17 @@
 # export.py
 import pandas as pd
 import os
+from config import BASE_DIR
 
 # Export table
-def export_to_excel(cln_project_df, materials_df, services_df, filename="/Users/madalinasamoila/besa_pipeline/data/raw/raw_data.xlsx"):
+def export_to_excel(cln_project_df, materials_df, services_df, filename= BASE_DIR / "data" / "raw" / "raw_data.xlsx"):
     with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
         cln_project_df.to_excel(writer, sheet_name="Projects", index=False)
         materials_df.to_excel(writer, sheet_name="Materials", index=False)
         services_df.to_excel(writer, sheet_name="Services", index=False)
         # labor_df.to_excel(writer, sheet_name="Labor", index=False)
-    print(f"✅ Data exported to {filename}")
+    #print(f"✅ Data exported to {filename}")
+    print(filename)
 
 
 def export_clean_tables_to_excel(
@@ -18,7 +20,7 @@ def export_clean_tables_to_excel(
     project_fact,
     expense_fact,
     # daily_labor_fact,
-    filename="/Users/madalinasamoila/besa_pipeline/data/clean/besaconstruction_clean_data.xlsx"
+    filename=BASE_DIR / "data" / "clean" / "besaconstruction_clean_data.xlsx"
 ):
     with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
         if client_dim is not None and not client_dim.empty:
@@ -41,7 +43,7 @@ def export_clean_tables_to_csv(
     project_fact,
     expense_fact,
     # daily_labor_fact,
-    output_dir="/Users/madalinasamoila/besa_pipeline/data/clean/"
+    output_dir=BASE_DIR / "data" / "clean"
 ):
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
