@@ -3,6 +3,7 @@ import datetime
 import logging
 import sys
 import time
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -17,15 +18,25 @@ from export import export_to_excel, export_clean_tables_to_excel, export_clean_t
 from sync_state import load_last_sync_ts, save_last_sync_ts
 from dropbox_upload import upload_files, download_files
 
+UK_TZ = ZoneInfo("Europe/London")
+
+def _uk_time(secs=None):
+    # GitHub Actions runners are always UTC regardless of where the machine "is",
+    # so timestamps must be explicitly converted to UK time rather than relying on
+    # the host's local timezone (which is correct locally but wrong - and wrong by a
+    # different amount depending on BST/GMT - on a UTC runner).
+    return datetime.datetime.fromtimestamp(secs if secs is not None else time.time(), tz=UK_TZ).timetuple()
+
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.StreamHandler(),               # prints to the terminal, as before
-        logging.FileHandler(LOG_FILE, encoding="utf-8"),  # appends to a persistent log file
-    ],
-)
+_log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+_log_formatter.converter = _uk_time
+
+_stream_handler = logging.StreamHandler()
+_stream_handler.setFormatter(_log_formatter)
+_file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+_file_handler.setFormatter(_log_formatter)
+
+logging.basicConfig(level=logging.INFO, handlers=[_stream_handler, _file_handler])
 logger = logging.getLogger(__name__)
 
 
