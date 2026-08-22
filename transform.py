@@ -155,17 +155,23 @@ def build_materials_table(tasks):
 # ----------------------
 # Services Table
 # ----------------------
-def build_services_table(tasks,subtasks):
+def build_services_table(tasks, subtasks, fallback_names=None):
+    """
+    fallback_names: optional {project_id: project_name} map used when a subtask's
+    parent project wasn't among `tasks` (e.g. on an incremental run where only the
+    subtask changed) — without it, the project name would resolve to None.
+    """
     task_id_to_name = {task["id"]: task["name"] for task in tasks}
+    fallback_names = fallback_names or {}
     subtasks_data = []
 
     for subtask in subtasks:
             parent_id = subtask.get("parent")
             if not parent_id:
                 continue        # skip subtasks without parent
-            
+
             cf = subtask.get("custom_fields",[])
-            project_name = task_id_to_name.get(parent_id)
+            project_name = task_id_to_name.get(parent_id) or fallback_names.get(parent_id)
             
             subtasks_data.append({
                     "project_id": parent_id,
@@ -222,10 +228,9 @@ def build_labor_table(tasks, existing_df=None):
 
     return existing_df if existing_df is not None else pd.DataFrame()
 
-# --------------------------------------------
 # Merging raw tables (incremental sync)
-# --------------------------------------------
-# These upsert freshly-fetched rows (for tasks changed since the last run) into the
+
+# These upsert rows (for tasks changed since the last run) into the
 # previous full snapshot, so the pipeline can fetch only what changed while still
 # exporting a complete dataset. They do not detect tasks deleted in ClickUp.
 def merge_projects_table(previous_df, new_df):

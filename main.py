@@ -47,6 +47,16 @@ def run_pipeline():
     last_sync_ts = load_last_sync_ts()
     run_started_at = int(time.time() * 1000)
 
+    prev_projects_df, prev_materials_df, prev_services_df = load_previous_raw_tables()
+    has_baseline = prev_projects_df is not None
+
+    if last_sync_ts and not has_baseline:
+        logger.warning(
+            "Sync state found but no previous raw data to merge into (%s missing or unreadable); "
+            "falling back to a full fetch", RAW_DATA_FILE
+        )
+        last_sync_ts = None
+
     if last_sync_ts:
         readable_ts = datetime.datetime.fromtimestamp(last_sync_ts / 1000).strftime("%Y-%m-%d %H:%M:%S")
         logger.info("Incremental run: fetching tasks updated since %s", readable_ts)
@@ -61,14 +71,18 @@ def run_pipeline():
     subtasks = get_subtasks(BESA_CLIENTS_LIST_ID, date_updated_gt=last_sync_ts)
     logger.info("Fetched details for %d tasks and %d changed subtasks", len(detailed_tasks), len(subtasks))
 
-    prev_projects_df, prev_materials_df, prev_services_df = load_previous_raw_tables()
-
     new_raw_project_df = build_projects_table(detailed_tasks)
     new_materials_df = build_materials_table(detailed_tasks)
-    new_services_df = build_services_table(detailed_tasks, subtasks)
 
     raw_project_df = merge_projects_table(prev_projects_df, new_raw_project_df)
     materials_df = merge_materials_table(prev_materials_df, new_materials_df, changed_project_ids)
+
+    # Fallback project names for subtasks whose parent project wasn't fetched this run
+    if "project_id" in raw_project_df.columns:
+        project_names = dict(zip(raw_project_df["project_id"], raw_project_df["project_name"]))
+    else:
+        project_names = {}
+    new_services_df = build_services_table(detailed_tasks, subtasks, fallback_names=project_names)
     services_df = merge_services_table(prev_services_df, new_services_df)
 
     cln_project_df = clean_project_addresses(raw_project_df)
