@@ -1,10 +1,11 @@
 # export.py
 import pandas as pd
 import os
-from config import BASE_DIR
+from config import BASE_DIR, RAW_DATA_FILE
 
 # Export table
-def export_to_excel(cln_project_df, materials_df, services_df, filename= BASE_DIR / "data" / "raw" / "raw_data.xlsx"):
+def export_to_excel(cln_project_df, materials_df, services_df, filename=RAW_DATA_FILE):
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
         cln_project_df.to_excel(writer, sheet_name="Projects", index=False)
         materials_df.to_excel(writer, sheet_name="Materials", index=False)
@@ -22,6 +23,7 @@ def export_clean_tables_to_excel(
     # daily_labor_fact,
     filename=BASE_DIR / "data" / "clean" / "besaconstruction_clean_data.xlsx"
 ):
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
         if client_dim is not None and not client_dim.empty:
             client_dim.to_excel(writer, sheet_name="ClientDim", index=False)

@@ -20,3 +20,10 @@ BESA_CLIENTS_LIST_ID = "901205091637"
 
 # Define the base directory for the project
 BASE_DIR = Path(__file__).resolve().parent
+
+# Raw export + incremental-sync state, shared between main.py and export.py
+RAW_DATA_FILE = BASE_DIR / "data" / "raw" / "raw_data.xlsx"
+LAST_SYNC_FILE = BASE_DIR / "data" / "raw" / "last_sync.json"
+
+# Log file accumulating history across runs
+LOG_FILE = BASE_DIR / "logs" / "pipeline.log"

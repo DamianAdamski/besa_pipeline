@@ -2,10 +2,32 @@
 from api import clickup_get
 from config import HEADERS
 
-def get_all_tasks(list_id):
-    tasks = clickup_get(f"list/{list_id}/task", HEADERS)["tasks"]
-    # to return all invoices
-    return [t for t in tasks] 
+PAGE_SIZE = 100  # ClickUp caps "list tasks" responses at 100 tasks per page
+
+def _get_all_task_pages(list_id, extra_params=None):
+    #Fetch every page of tasks for a list, following ClickUp's pagination.
+    tasks = []
+    page = 0
+    while True:
+        params = {"page": page}
+        if extra_params:
+            params.update(extra_params)
+        response = clickup_get(f"list/{list_id}/task", HEADERS, params=params)
+        page_tasks = response.get("tasks", [])
+        tasks.extend(page_tasks)
+
+        last_page = response.get("last_page")
+        if last_page is None:
+            last_page = len(page_tasks) < PAGE_SIZE
+        if last_page or not page_tasks:
+            break
+        page += 1
+    return tasks
+
+def get_all_tasks(list_id, date_updated_gt=None):
+    # to return all invoices (or, with date_updated_gt set, only those changed since that ms-epoch timestamp)
+    extra_params = {"date_updated_gt": date_updated_gt} if date_updated_gt else None
+    return _get_all_task_pages(list_id, extra_params=extra_params)
 
 def get_task_details(task_ids):
     details = []
@@ -13,17 +35,12 @@ def get_task_details(task_ids):
         details.append(clickup_get(f"task/{task_id}", HEADERS))
     return details
 
-def get_subtasks(list_id):
-    subtasks = []
-    tasks_with_subtasks = clickup_get(
-        f"list/{list_id}/task",
-        HEADERS,
-        params={"subtasks": "true"}
-    )["tasks"]
-    for task in tasks_with_subtasks:
-        if task.get("parent"):  # this task is a subtask
-            subtasks.append(task)
-    return subtasks
+def get_subtasks(list_id, date_updated_gt=None):
+    extra_params = {"subtasks": "true"}
+    if date_updated_gt:
+        extra_params["date_updated_gt"] = date_updated_gt
+    tasks_with_subtasks = _get_all_task_pages(list_id, extra_params=extra_params)
+    return [task for task in tasks_with_subtasks if task.get("parent")]
 
 def get_task_texts(tasks):
     """

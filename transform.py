@@ -55,7 +55,7 @@ def build_projects_table(tasks):
         data.append(row)
 
     df = pd.DataFrame(data)
-    return clean_project_addresses(df)
+    return df
 
 # ----------------------
 # Cleaning Projects Table
@@ -67,15 +67,15 @@ def clean_project_addresses(df):
     
     def extract_parts(address):
         if not isinstance(address, str):
-            return None, None, None, None, None
-        
+            return None, None, None, None, None, None
+
         # Normalize spaces & uppercase
         addr = re.sub(r'\s+', ' ', address.strip()).upper()
-        
+
         # Find postcode
         m = re.search(postcode_regex, addr, re.IGNORECASE)
         if not m:
-            return addr, None, None, None, None
+            return addr, None, None, None, None, addr
         
         postcode = m.group(1).strip()
         
@@ -221,6 +221,39 @@ def build_labor_table(tasks, existing_df=None):
         return labor_df
 
     return existing_df if existing_df is not None else pd.DataFrame()
+
+# --------------------------------------------
+# Merging raw tables (incremental sync)
+# --------------------------------------------
+# These upsert freshly-fetched rows (for tasks changed since the last run) into the
+# previous full snapshot, so the pipeline can fetch only what changed while still
+# exporting a complete dataset. They do not detect tasks deleted in ClickUp.
+def merge_projects_table(previous_df, new_df):
+    if previous_df is None or previous_df.empty:
+        return new_df
+    if new_df.empty:
+        return previous_df
+    changed_ids = set(new_df["project_id"])
+    kept = previous_df[~previous_df["project_id"].isin(changed_ids)]
+    return pd.concat([kept, new_df], ignore_index=True)
+
+def merge_materials_table(previous_df, new_df, changed_project_ids):
+    if previous_df is None or previous_df.empty:
+        return new_df
+    if not changed_project_ids:
+        return previous_df
+    kept = previous_df[~previous_df["project_id"].isin(changed_project_ids)]
+    return pd.concat([kept, new_df], ignore_index=True)
+
+def merge_services_table(previous_df, new_df):
+    if previous_df is None or previous_df.empty:
+        return new_df
+    if new_df.empty:
+        return previous_df
+    changed_ids = set(new_df["subtask_id"])
+    kept = previous_df[~previous_df["subtask_id"].isin(changed_ids)]
+    return pd.concat([kept, new_df], ignore_index=True)
+
 # --------------------------------------------
 # Cleaning & Normalising tables
 # --------------------------------------------
@@ -228,7 +261,8 @@ def split_clean_tables(cln_project_df, material_df, labor_df=None):
     # --- Define field types ---
     string_cols = [
         "project_name", "project_status",
-        "client_name", "client_street_name",
+        "client_name", "client_email_address",
+        "client_street_name",
         "client_post_code", "client_outward_code",
         "client_inward_code", "client_city"
     ]
@@ -282,12 +316,13 @@ def split_clean_tables(cln_project_df, material_df, labor_df=None):
         "project_start_date",
         "project_end_date",
         "client_name",
+        "client_email_address",
         "client_post_code"
     ]].merge(
-        client_dim[["client_id", "client_name", "client_post_code"]],
-        on=["client_name", "client_post_code"],
+        client_dim[["client_id", "client_name", "client_email_address", "client_post_code"]],
+        on=["client_name", "client_email_address", "client_post_code"],
         how="left"
-    ).drop(columns=["client_name","client_post_code"])
+    ).drop(columns=["client_name", "client_email_address", "client_post_code"])
 
     # --- Project Fact ---
     total_materials_fact = (
