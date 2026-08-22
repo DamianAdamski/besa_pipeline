@@ -28,6 +28,17 @@ def _uk_time(secs=None):
     return datetime.datetime.fromtimestamp(secs if secs is not None else time.time(), tz=UK_TZ).timetuple()
 
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+if not LOG_FILE.exists():
+    # Restore prior log history (e.g. a fresh GitHub Actions runner has none locally)
+    # before the FileHandler below opens the file, so new lines append onto the full
+    # history instead of starting over. Best-effort: a missing/misconfigured Dropbox
+    # integration shouldn't block the pipeline from starting.
+    try:
+        download_files([LOG_FILE])
+    except Exception:
+        pass
+
 _log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 _log_formatter.converter = _uk_time
 
