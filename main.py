@@ -6,7 +6,7 @@ import time
 
 import pandas as pd
 
-from config import BESA_CLIENTS_LIST_ID, RAW_DATA_FILE, LOG_FILE
+from config import BESA_CLIENTS_LIST_ID, RAW_DATA_FILE, CLEAN_DATA_DIR, LOG_FILE
 from extract import get_all_tasks, get_task_details, get_subtasks
 from transform import (
     build_projects_table, build_materials_table, build_services_table, build_labor_table,
@@ -15,6 +15,7 @@ from transform import (
 )
 from export import export_to_excel, export_clean_tables_to_excel, export_clean_tables_to_csv
 from sync_state import load_last_sync_ts, save_last_sync_ts
+from dropbox_upload import upload_files
 
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
@@ -95,6 +96,16 @@ def run_pipeline():
 
     export_clean_tables_to_excel(client_dim, project_dim, project_fact, material_fact)
     export_clean_tables_to_csv(client_dim, project_dim, project_fact, material_fact)
+
+    logger.info("Uploading results to Dropbox")
+    upload_files([
+        RAW_DATA_FILE,
+        CLEAN_DATA_DIR / "besaconstruction_clean_data.xlsx",
+        CLEAN_DATA_DIR / "ClientDim.csv",
+        CLEAN_DATA_DIR / "ProjectDim.csv",
+        CLEAN_DATA_DIR / "ProjectFact.csv",
+        CLEAN_DATA_DIR / "ExpenseFact.csv",
+    ])
 
     save_last_sync_ts(run_started_at)
     logger.info("Pipeline run completed successfully")

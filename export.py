@@ -1,7 +1,10 @@
 # export.py
+import logging
 import pandas as pd
 import os
 from config import BASE_DIR, RAW_DATA_FILE
+
+logger = logging.getLogger(__name__)
 
 # Export table
 def export_to_excel(cln_project_df, materials_df, services_df, filename=RAW_DATA_FILE):
@@ -11,8 +14,7 @@ def export_to_excel(cln_project_df, materials_df, services_df, filename=RAW_DATA
         materials_df.to_excel(writer, sheet_name="Materials", index=False)
         services_df.to_excel(writer, sheet_name="Services", index=False)
         # labor_df.to_excel(writer, sheet_name="Labor", index=False)
-    #print(f"✅ Data exported to {filename}")
-    print(filename)
+    logger.info("Raw data exported to %s", filename)
 
 
 def export_clean_tables_to_excel(
@@ -36,7 +38,7 @@ def export_clean_tables_to_excel(
         # if daily_labor_fact is not None and not daily_labor_fact.empty:
         #     daily_labor_fact.to_excel(writer, sheet_name="DailyLaborFact", index=False)
 
-    print(f"✅ Clean dimension/fact tables exported to {filename}")
+    logger.info("Clean dimension/fact tables exported to %s", filename)
 
 
 def export_clean_tables_to_csv(
@@ -52,16 +54,16 @@ def export_clean_tables_to_csv(
 
     if client_dim is not None and not client_dim.empty:
         client_dim.to_csv(os.path.join(output_dir, "ClientDim.csv"), index=False)
-    print(f"✅ Clean ClientDim table exported as CSVs to {output_dir}")
+        logger.info("Clean ClientDim table exported as CSV to %s", output_dir)
     if project_dim is not None and not project_dim.empty:
         project_dim.to_csv(os.path.join(output_dir, "ProjectDim.csv"), index=False)
-    print(f"✅ Clean ProjectDim table exported as CSVs to {output_dir}")
+        logger.info("Clean ProjectDim table exported as CSV to %s", output_dir)
     if project_fact is not None and not project_fact.empty:
         project_fact.to_csv(os.path.join(output_dir, "ProjectFact.csv"), index=False)
-    print(f"✅ Clean ProjectFact table exported as CSVs to {output_dir}")
+        logger.info("Clean ProjectFact table exported as CSV to %s", output_dir)
     if expense_fact is not None and not expense_fact.empty:
         expense_fact.to_csv(os.path.join(output_dir, "ExpenseFact.csv"), index=False)
-    print(f"✅ Clean ExpenseFact table exported as CSVs to {output_dir}")
+        logger.info("Clean ExpenseFact table exported as CSV to %s", output_dir)
     # if daily_labor_fact is not None and not daily_labor_fact.empty:
     #     daily_labor_fact.to_csv(os.path.join(output_dir, "DailyLaborFact.csv"), index=False)
 
