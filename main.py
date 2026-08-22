@@ -122,3 +122,11 @@ if __name__ == "__main__":
     except Exception:
         logger.exception("Pipeline run failed")
         sys.exit(1)
+    finally:
+        # Uploaded last and separately (not as part of run_pipeline's own upload_files
+        # call) so it captures the fullest possible log - including the final
+        # success/failure line - and still happens even if the pipeline raised above.
+        try:
+            upload_files([LOG_FILE])
+        except Exception:
+            logger.exception("Could not upload log file to Dropbox")
