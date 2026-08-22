@@ -1,4 +1,4 @@
-# BESA Construction Data Pipeline
+# BESA Data Pipeline
 
 This project is a Python-based tool that collects project data from **ClickUp** and converts it into clean, structured tables for reporting and analysis. It handles projects, materials, and services, and exports them to Excel and CSV files. It runs automatically every day and uploads the results to Dropbox, so reports stay up to date without anyone needing to run anything by hand.
 
