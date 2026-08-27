@@ -33,38 +33,99 @@ def _clean_value(value):
     return value
 
 
-def upload_projects(project_dim, project_fact, client_dim):
-    """Upserts one row per project into besa_projects, so the Mapogos Pricing app
-    can offer real ClickUp projects to price against and later compare predicted
-    price to actual accepted price (project_fact's project_value)."""
+def _upload_clients(client, client_dim):
+    if client_dim is None or client_dim.empty:
+        return 0
+    rows = [
+        {
+            "client_id": _clean_value(row["client_id"]),
+            "client_name": _clean_value(row.get("client_name")),
+            "sales_channel": _clean_value(row.get("sales_channel")),
+            "client_email_address": _clean_value(row.get("client_email_address")),
+            "client_phone_number": _clean_value(row.get("client_phone_number")),
+            "client_street_name": _clean_value(row.get("client_street_name")),
+            "client_post_code": _clean_value(row.get("client_post_code")),
+            "client_outward_code": _clean_value(row.get("client_outward_code")),
+            "client_inward_code": _clean_value(row.get("client_inward_code")),
+            "client_city": _clean_value(row.get("client_city")),
+        }
+        for _, row in client_dim.iterrows()
+    ]
+    client.table("besa_clients").upsert(rows, on_conflict="client_id").execute()
+    return len(rows)
+
+
+def _upload_project_dim(client, project_dim):
     if project_dim is None or project_dim.empty:
-        logger.info("No projects to sync to Supabase")
-        return
-
-    value_by_id = (
-        dict(zip(project_fact["project_id"], project_fact["project_value"]))
-        if project_fact is not None and not project_fact.empty
-        else {}
-    )
-    client_name_by_id = (
-        dict(zip(client_dim["client_id"], client_dim["client_name"]))
-        if client_dim is not None and not client_dim.empty
-        else {}
-    )
-
+        return 0
     rows = [
         {
             "project_id": _clean_value(row["project_id"]),
             "project_name": _clean_value(row.get("project_name")),
-            "client_name": _clean_value(client_name_by_id.get(row.get("client_id"))),
             "project_status": _clean_value(row.get("project_status")),
             "project_start_date": _clean_date(_clean_value(row.get("project_start_date"))),
             "project_end_date": _clean_date(_clean_value(row.get("project_end_date"))),
-            "project_value": _clean_value(value_by_id.get(row["project_id"])),
+            "client_id": _clean_value(row.get("client_id")),
         }
         for _, row in project_dim.iterrows()
     ]
-
-    client = _get_client()
     client.table("besa_projects").upsert(rows, on_conflict="project_id").execute()
-    logger.info("Synced %d projects to Supabase", len(rows))
+    return len(rows)
+
+
+def _upload_project_facts(client, project_fact):
+    if project_fact is None or project_fact.empty:
+        return 0
+    rows = [
+        {
+            "project_id": _clean_value(row["project_id"]),
+            "project_value": _clean_value(row.get("project_value")),
+            "dardan_days_worked": _clean_value(row.get("dardan_days_worked")),
+            "musa_days_worked": _clean_value(row.get("musa_days_worked")),
+            "dori_days_worked": _clean_value(row.get("dori_days_worked")),
+            "remzi_days_worked": _clean_value(row.get("remzi_days_worked")),
+            "total_material_cost": _clean_value(row.get("total_material_cost")),
+        }
+        for _, row in project_fact.iterrows()
+    ]
+    client.table("besa_project_facts").upsert(rows, on_conflict="project_id").execute()
+    return len(rows)
+
+
+def _upload_expenses(client, material_fact):
+    # No stable natural key per line item (two identical expense rows for the
+    # same project are indistinguishable), and the pipeline always has the full
+    # current snapshot in materials_df (not just this run's changes) - so a full
+    # replace is simpler and safer than trying to diff/upsert individual rows.
+    client.table("besa_expenses").delete().gt("id", 0).execute()
+
+    if material_fact is None or material_fact.empty:
+        return 0
+    rows = [
+        {
+            "project_id": _clean_value(row.get("project_id")),
+            "expense_name": _clean_value(row.get("expense_name")),
+            "expense_cost": _clean_value(row.get("expense_cost")),
+            "quantity": _clean_value(row.get("quantity")),
+        }
+        for _, row in material_fact.iterrows()
+    ]
+    client.table("besa_expenses").insert(rows).execute()
+    return len(rows)
+
+
+def sync_all(client_dim, project_dim, project_fact, material_fact):
+    """Mirrors all 4 of besa_pipeline's output tables into Supabase, in FK-safe
+    order: clients before projects (projects.client_id references besa_clients),
+    then projects before facts/expenses (both reference besa_projects)."""
+    client = _get_client()
+
+    n_clients = _upload_clients(client, client_dim)
+    n_projects = _upload_project_dim(client, project_dim)
+    n_facts = _upload_project_facts(client, project_fact)
+    n_expenses = _upload_expenses(client, material_fact)
+
+    logger.info(
+        "Synced to Supabase: %d clients, %d projects, %d project facts, %d expenses",
+        n_clients, n_projects, n_facts, n_expenses,
+    )

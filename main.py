@@ -17,7 +17,7 @@ from transform import (
 from export import export_to_excel, export_clean_tables_to_excel, export_clean_tables_to_csv
 from sync_state import load_last_sync_ts, save_last_sync_ts
 from dropbox_upload import upload_files, download_files
-from supabase_upload import upload_projects
+from supabase_upload import sync_all
 
 UK_TZ = ZoneInfo("Europe/London")
 
@@ -135,8 +135,8 @@ def run_pipeline():
         CLEAN_DATA_DIR / "ExpenseFact.csv",
     ])
 
-    logger.info("Syncing projects to Supabase")
-    upload_projects(project_dim, project_fact, client_dim)
+    logger.info("Syncing to Supabase")
+    sync_all(client_dim, project_dim, project_fact, material_fact)
 
     save_last_sync_ts(run_started_at)
     logger.info("Pipeline run completed successfully")

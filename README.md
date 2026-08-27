@@ -1,6 +1,6 @@
 # BESA Data Pipeline
 
-This project is a Python-based tool that collects project data from **ClickUp** and converts it into clean, structured tables for reporting and analysis. It handles projects, materials, and services, and exports them to Excel and CSV files. It runs automatically every day, uploads the results to Dropbox, and syncs current projects into the Mapogos Pricing app's database — so reports stay up to date and the pricing app always has a real, current list of projects to price against, without anyone needing to run anything by hand.
+This project is a Python-based tool that collects project data from **ClickUp** and converts it into clean, structured tables for reporting and analysis. It handles projects, materials, and services, and exports them to Excel and CSV files. It runs automatically every day, uploads the results to Dropbox, and mirrors all four clean tables into the Mapogos Pricing app's database — so reports stay up to date and the pricing app always has a real, current list of projects (and their client, cost, and material detail) to price against, without anyone needing to run anything by hand.
 
 ---
 
@@ -23,7 +23,7 @@ This project is a Python-based tool that collects project data from **ClickUp** 
    - Materials
    - Services
 3. **Load / Export:** Saves the cleaned data into Excel and CSV files.
-4. **Upload:** Sends the finished reports (and the log of the run itself) to Dropbox, and upserts current projects (name, client, status, dates, accepted price) into the `besa_projects` table in the Mapogos Pricing app's Supabase database.
+4. **Upload:** Sends the finished reports (and the log of the run itself) to Dropbox, and mirrors ClientDim, ProjectDim, ProjectFact, and ExpenseFact into matching tables (`besa_clients`, `besa_projects`, `besa_project_facts`, `besa_expenses`) in the Mapogos Pricing app's Supabase database.
 
 ---
 
@@ -39,14 +39,14 @@ This project is a Python-based tool that collects project data from **ClickUp** 
 
 **Cleaned Data (Excel & CSV):** `data/clean/besaconstruction_clean_data.xlsx`
 
-| Table       | Description |
-|-------------|-------------|
-| ClientDim   | Clean client information |
-| ProjectDim  | Project details linked to clients |
-| ProjectFact | Project metrics including total cost |
-| ExpenseFact | Material and service costs |
+| Table       | Description | Supabase table |
+|-------------|-------------|-----------------|
+| ClientDim   | Clean client information | `besa_clients` |
+| ProjectDim  | Project details linked to clients | `besa_projects` |
+| ProjectFact | Project metrics including total cost | `besa_project_facts` |
+| ExpenseFact | Material and service costs | `besa_expenses` |
 
-**Where to actually check your reports:** the Dropbox app folder the pipeline uploads to (`Apps/<app name>` in your Dropbox) always has the latest version of every file above, plus `pipeline.log` — the full history of every run, useful for checking a scheduled run actually happened or diagnosing a failure without needing to open this repo at all.
+**Where to actually check your reports:** the Dropbox app folder the pipeline uploads to (`Apps/<app name>` in your Dropbox) always has the latest version of every file above, plus `pipeline.log` — the full history of every run, useful for checking a scheduled run actually happened or diagnosing a failure without needing to open this repo at all. The same data also lands in Supabase (see the table above) — that's what the Mapogos Pricing app reads from directly; a `besa_projects_overview` view there joins projects back to their client and accepted price for convenience.
 
 ---
 
