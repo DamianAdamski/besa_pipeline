@@ -23,6 +23,13 @@ DROPBOX_APP_KEY = os.getenv("DROPBOX_APP_KEY")
 DROPBOX_APP_SECRET = os.getenv("DROPBOX_APP_SECRET")
 DROPBOX_REFRESH_TOKEN = os.getenv("DROPBOX_REFRESH_TOKEN")
 
+# Supabase upload (the Mapogos Pricing app's database). Uses the service_role
+# key deliberately - never the anon/publishable one - since this is a trusted
+# backend job that needs to write to besa_projects, which the app itself is
+# only ever granted read access to.
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
 # Define the base directory for the project
 BASE_DIR = Path(__file__).resolve().parent
 

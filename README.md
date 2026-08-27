@@ -1,6 +1,6 @@
 # BESA Data Pipeline
 
-This project is a Python-based tool that collects project data from **ClickUp** and converts it into clean, structured tables for reporting and analysis. It handles projects, materials, and services, and exports them to Excel and CSV files. It runs automatically every day and uploads the results to Dropbox, so reports stay up to date without anyone needing to run anything by hand.
+This project is a Python-based tool that collects project data from **ClickUp** and converts it into clean, structured tables for reporting and analysis. It handles projects, materials, and services, and exports them to Excel and CSV files. It runs automatically every day, uploads the results to Dropbox, and syncs current projects into the Mapogos Pricing app's database — so reports stay up to date and the pricing app always has a real, current list of projects to price against, without anyone needing to run anything by hand.
 
 ---
 
@@ -23,7 +23,7 @@ This project is a Python-based tool that collects project data from **ClickUp** 
    - Materials
    - Services
 3. **Load / Export:** Saves the cleaned data into Excel and CSV files.
-4. **Upload:** Sends the finished reports (and the log of the run itself) to Dropbox.
+4. **Upload:** Sends the finished reports (and the log of the run itself) to Dropbox, and upserts current projects (name, client, status, dates, accepted price) into the `besa_projects` table in the Mapogos Pricing app's Supabase database.
 
 ---
 
@@ -69,9 +69,13 @@ CLICKUP_TOKEN = YOUR_CLICKUP_TOKEN
 DROPBOX_APP_KEY = YOUR_DROPBOX_APP_KEY
 DROPBOX_APP_SECRET = YOUR_DROPBOX_APP_SECRET
 DROPBOX_REFRESH_TOKEN = YOUR_DROPBOX_REFRESH_TOKEN
+SUPABASE_URL = YOUR_SUPABASE_PROJECT_URL
+SUPABASE_SERVICE_ROLE_KEY = YOUR_SUPABASE_SERVICE_ROLE_KEY
 ```
 
 `CLICKUP_TOKEN` comes from your ClickUp account settings. The three Dropbox values come from a Dropbox app (Scoped access, **App folder** type) created at [dropbox.com/developers/apps](https://www.dropbox.com/developers/apps), with `files.content.read`/`files.content.write` permissions enabled and a one-time OAuth authorization completed to obtain the refresh token — this is already set up for the current Dropbox app folder; you'd only need to redo it if that app's access is ever revoked.
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` come from the Mapogos Pricing app's Supabase project (Settings → API). This deliberately uses the **service_role** key, not the anon/publishable one — that key is only ever used by this trusted backend job, and it must never be put in the pricing app itself or shared anywhere client-facing, since it bypasses all database security rules.
 
 4. Run the pipeline in your terminal: `python main.py`
 
@@ -88,7 +92,7 @@ DROPBOX_REFRESH_TOKEN = YOUR_DROPBOX_REFRESH_TOKEN
 
 The pipeline also runs on its own every day via [`.github/workflows/daily-pipeline.yml`](.github/workflows/daily-pipeline.yml) (06:00 UTC), with no machine needing to be left on. Since each run happens on a fresh, empty cloud runner, `main.py` restores its previous state (the merge baseline and sync timestamp) from Dropbox at startup if it isn't found locally, then uploads everything — including an updated `pipeline.log` — back to Dropbox once the run finishes.
 
-To set this up on a new copy of this repo, add these as repository secrets (Settings → Secrets and variables → Actions): `CLICKUP_TOKEN`, `DROPBOX_APP_KEY`, `DROPBOX_APP_SECRET`, `DROPBOX_REFRESH_TOKEN`. You can also trigger a run manually any time from the **Actions** tab → **Daily BESA Pipeline** → **Run workflow**, without waiting for the schedule.
+To set this up on a new copy of this repo, add these as repository secrets (Settings → Secrets and variables → Actions): `CLICKUP_TOKEN`, `DROPBOX_APP_KEY`, `DROPBOX_APP_SECRET`, `DROPBOX_REFRESH_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. You can also trigger a run manually any time from the **Actions** tab → **Daily BESA Pipeline** → **Run workflow**, without waiting for the schedule.
 
 ---
 
@@ -110,6 +114,7 @@ besa_pipeline/
 ├─ config.py             # API keys, list IDs, and file paths
 ├─ sync_state.py         # Tracks the timestamp of the last successful run
 ├─ dropbox_upload.py     # Uploads results to (and restores state from) Dropbox
+├─ supabase_upload.py    # Syncs current projects into the pricing app's database
 ├─ main.py               # Runs the full pipeline
 └─ README.md             # This file
 ```
