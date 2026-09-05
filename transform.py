@@ -178,6 +178,12 @@ def build_services_table(tasks, subtasks, fallback_names=None):
                     "project_name": project_name,
                     "subtask_id": subtask["id"],
                     "subtask_name": subtask['name'],
+                    # Kept as the original string (not float()) so Postgres's numeric
+                    # column parses it with full precision - ClickUp's orderindex has
+                    # far more significant digits than a 64-bit float can hold, and it's
+                    # what actually reflects a task's position among siblings (including
+                    # manual drag-to-reorder), unlike date_created.
+                    "order_index": subtask.get("orderindex"),
                     "service_price": get_custom_field_value(cf,'Total Price (excl. VAT%)'),
                     "service_description": get_custom_field_value(cf,'Service Description')
             })

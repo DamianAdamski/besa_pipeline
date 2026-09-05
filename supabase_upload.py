@@ -114,18 +114,62 @@ def _upload_expenses(client, material_fact):
     return len(rows)
 
 
-def sync_all(client_dim, project_dim, project_fact, material_fact):
-    """Mirrors all 4 of besa_pipeline's output tables into Supabase, in FK-safe
+def _upload_subtasks(client, services_df):
+    # Unlike expenses, ClickUp subtasks have a real stable id (subtask_id),
+    # so this is a normal upsert rather than a delete-all-then-insert.
+    if services_df is None or services_df.empty:
+        return 0
+    rows = [
+        {
+            "subtask_id": _clean_value(row["subtask_id"]),
+            "project_id": _clean_value(row.get("project_id")),
+            "subtask_name": _clean_value(row.get("subtask_name")),
+            "order_index": _clean_value(row.get("order_index")),
+            "service_price": _clean_value(row.get("service_price")),
+            "service_description": _clean_value(row.get("service_description")),
+        }
+        for _, row in services_df.iterrows()
+    ]
+    client.table("besa_project_subtasks").upsert(rows, on_conflict="subtask_id").execute()
+    return len(rows)
+
+
+def _drop_orphans(df, valid_project_ids, table_name):
+    """material_fact/services_df can reference a project_id that never appears
+    as its own row in project_dim (e.g. a subtask whose parent task was deleted
+    or archived in ClickUp) - besa_expenses/besa_project_subtasks both have a
+    foreign key to besa_projects, so uploading such a row would violate it and
+    abort the whole sync. Dropping them here (with a visible warning) is safer
+    than either crashing the run or silently relaxing the foreign key."""
+    if df is None or df.empty:
+        return df
+    known = df["project_id"].isin(valid_project_ids)
+    if (~known).any():
+        orphans = df.loc[~known, "project_id"].unique()
+        logger.warning(
+            "Dropping %d %s row(s) referencing %d unknown project_id(s) (parent likely deleted/archived in ClickUp): %s",
+            (~known).sum(), table_name, len(orphans), list(orphans),
+        )
+    return df[known]
+
+
+def sync_all(client_dim, project_dim, project_fact, material_fact, services_df):
+    """Mirrors all of besa_pipeline's output tables into Supabase, in FK-safe
     order: clients before projects (projects.client_id references besa_clients),
-    then projects before facts/expenses (both reference besa_projects)."""
+    then projects before facts/expenses/subtasks (all three reference besa_projects)."""
     client = _get_client()
+
+    valid_project_ids = set(project_dim["project_id"]) if project_dim is not None and not project_dim.empty else set()
+    material_fact = _drop_orphans(material_fact, valid_project_ids, "besa_expenses")
+    services_df = _drop_orphans(services_df, valid_project_ids, "besa_project_subtasks")
 
     n_clients = _upload_clients(client, client_dim)
     n_projects = _upload_project_dim(client, project_dim)
     n_facts = _upload_project_facts(client, project_fact)
     n_expenses = _upload_expenses(client, material_fact)
+    n_subtasks = _upload_subtasks(client, services_df)
 
     logger.info(
-        "Synced to Supabase: %d clients, %d projects, %d project facts, %d expenses",
-        n_clients, n_projects, n_facts, n_expenses,
+        "Synced to Supabase: %d clients, %d projects, %d project facts, %d expenses, %d subtasks",
+        n_clients, n_projects, n_facts, n_expenses, n_subtasks,
     )

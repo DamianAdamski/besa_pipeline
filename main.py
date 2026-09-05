@@ -136,7 +136,7 @@ def run_pipeline():
     ])
 
     logger.info("Syncing to Supabase")
-    sync_all(client_dim, project_dim, project_fact, material_fact)
+    sync_all(client_dim, project_dim, project_fact, material_fact, services_df)
 
     save_last_sync_ts(run_started_at)
     logger.info("Pipeline run completed successfully")

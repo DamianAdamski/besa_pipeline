@@ -45,6 +45,7 @@ This project is a Python-based tool that collects project data from **ClickUp** 
 | ProjectDim  | Project details linked to clients | `besa_projects` |
 | ProjectFact | Project metrics including total cost | `besa_project_facts` |
 | ExpenseFact | Material and service costs | `besa_expenses` |
+| Services (raw) | ClickUp subtasks per project (name, price, description) | `besa_project_subtasks` |
 
 **Where to actually check your reports:** the Dropbox app folder the pipeline uploads to (`Apps/<app name>` in your Dropbox) always has the latest version of every file above, plus `pipeline.log` — the full history of every run, useful for checking a scheduled run actually happened or diagnosing a failure without needing to open this repo at all. The same data also lands in Supabase (see the table above) — that's what the Mapogos Pricing app reads from directly; a `besa_projects_overview` view there joins projects back to their client and accepted price for convenience.
 
