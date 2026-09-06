@@ -153,6 +153,62 @@ def _drop_orphans(df, valid_project_ids, table_name):
     return df[known]
 
 
+def prune_deleted_projects(live_project_ids):
+    """Removes projects that no longer exist in ClickUp.
+
+    The merge logic only ever adds and updates, so a project deleted or archived
+    in ClickUp lingered in Supabase forever - and kept appearing in the pricing
+    app's project picker.
+
+    `live_project_ids` must come from a FULL ClickUp listing, never an
+    incremental one, or this would delete nearly everything. Two safeguards:
+    a project with a saved pricing run against it is kept (deleting it would
+    orphan real work, and the foreign key would refuse anyway), and the whole
+    prune is skipped if the live list looks implausibly short, which would
+    suggest a failed or partial fetch rather than genuine deletions.
+    """
+    if not live_project_ids:
+        logger.warning("No live project ids supplied; skipping prune")
+        return 0
+
+    client = _get_client()
+    db_ids = {r["project_id"] for r in client.table("besa_projects").select("project_id").execute().data}
+    stale = db_ids - set(live_project_ids)
+    if not stale:
+        return 0
+
+    if len(live_project_ids) < len(db_ids) * 0.5:
+        logger.warning(
+            "Live ClickUp list (%d) is less than half of what's stored (%d) - skipping prune in case the fetch was incomplete",
+            len(live_project_ids), len(db_ids),
+        )
+        return 0
+
+    # Projects with pricing runs attached are kept - that history matters more
+    # than tidiness, and app_runs.besa_project_id would block the delete anyway.
+    referenced = {
+        r["besa_project_id"]
+        for r in client.table("app_runs").select("besa_project_id").execute().data
+        if r["besa_project_id"]
+    }
+    protected = stale & referenced
+    if protected:
+        logger.warning("Keeping %d deleted-in-ClickUp project(s) that still have pricing runs: %s",
+                       len(protected), sorted(protected))
+
+    removable = sorted(stale - referenced)
+    for pid in removable:
+        # Children first - each has a foreign key onto besa_projects.
+        client.table("besa_project_subtasks").delete().eq("project_id", pid).execute()
+        client.table("besa_expenses").delete().eq("project_id", pid).execute()
+        client.table("besa_project_facts").delete().eq("project_id", pid).execute()
+        client.table("besa_projects").delete().eq("project_id", pid).execute()
+
+    if removable:
+        logger.info("Pruned %d project(s) no longer in ClickUp: %s", len(removable), removable)
+    return len(removable)
+
+
 def sync_all(client_dim, project_dim, project_fact, material_fact, services_df):
     """Mirrors all of besa_pipeline's output tables into Supabase, in FK-safe
     order: clients before projects (projects.client_id references besa_clients),
