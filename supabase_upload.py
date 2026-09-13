@@ -209,6 +209,19 @@ def prune_deleted_projects(live_project_ids):
     return len(removable)
 
 
+def sync_acceptance_status():
+    """Calls the sync_app_runs_acceptance() Postgres function (created once via
+    the Supabase SQL Editor - see sync_app_runs_acceptance.sql), which mirrors
+    besa_projects.project_status onto app_runs.acceptance for the Mapogos
+    Pricing app. Must run after sync_all(), since it depends on besa_projects
+    already reflecting this run's ClickUp statuses."""
+    client = _get_client()
+    result = client.rpc("sync_app_runs_acceptance").execute()
+    updated = result.data
+    logger.info("Synced acceptance status for %s app_runs row(s)", updated)
+    return updated
+
+
 def sync_all(client_dim, project_dim, project_fact, material_fact, services_df):
     """Mirrors all of besa_pipeline's output tables into Supabase, in FK-safe
     order: clients before projects (projects.client_id references besa_clients),

@@ -17,7 +17,7 @@ from transform import (
 from export import export_to_excel, export_clean_tables_to_excel, export_clean_tables_to_csv
 from sync_state import load_last_sync_ts, save_last_sync_ts
 from dropbox_upload import upload_files, download_files
-from supabase_upload import sync_all, prune_deleted_projects
+from supabase_upload import sync_all, sync_acceptance_status, prune_deleted_projects
 
 UK_TZ = ZoneInfo("Europe/London")
 
@@ -137,6 +137,11 @@ def run_pipeline():
 
     logger.info("Syncing to Supabase")
     sync_all(client_dim, project_dim, project_fact, material_fact, services_df)
+
+    try:
+        sync_acceptance_status()
+    except Exception:
+        logger.exception("Could not sync acceptance status to app_runs")
 
     # Deletions can't be spotted from an incremental fetch, so ask ClickUp for
     # the full current id list. This is only the list endpoint - no per-task
