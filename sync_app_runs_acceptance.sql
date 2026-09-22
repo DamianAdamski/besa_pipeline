@@ -15,7 +15,8 @@ BEGIN
       'completed project not paid', 'competed project not paid' -- covers possible typo in stored data
     ) THEN 'accepted'
     WHEN lower(bp.project_status) = 'no response/refusal' THEN 'rejected'
-    WHEN lower(bp.project_status) = 'warm lead' THEN 'negotiating'
+    WHEN lower(bp.project_status) = 'warm lead' THEN 'warm lead'
+    WHEN lower(bp.project_status) = 'proposal sent' THEN 'proposal sent' -- renamed from "Client Landed" in ClickUp
     ELSE ar.acceptance
   END
   FROM besa_projects bp
@@ -23,7 +24,7 @@ BEGIN
     AND lower(bp.project_status) IN (
       'ongoing', 'upcoming', 'paid invoice',
       'completed project not paid', 'competed project not paid',
-      'no response/refusal', 'warm lead'
+      'no response/refusal', 'warm lead', 'proposal sent'
     );
 
   GET DIAGNOSTICS affected_rows = ROW_COUNT;
