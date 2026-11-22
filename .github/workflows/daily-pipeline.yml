@@ -2,7 +2,7 @@ name: Daily BESA Pipeline
 
 on:
   schedule:
-    - cron: "0 6 * * *"   # 06:00 UTC daily (GitHub may delay this slightly under load)
+    - cron: "0 6,7,15,18,19,20,21 * * *"   # 06:00 UTC daily (GitHub may delay this slightly under load)
   workflow_dispatch: {}    # lets you trigger a run manually from the Actions tab, for testing
 
 jobs:
